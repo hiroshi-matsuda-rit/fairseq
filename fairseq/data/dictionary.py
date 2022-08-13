@@ -298,6 +298,7 @@ class Dictionary(object):
         consumer=None,
         append_eos=True,
         reverse_order=False,
+        mask_prefix="m:",
     ):
         words = line_tokenizer(line)
         if reverse_order:
@@ -305,14 +306,20 @@ class Dictionary(object):
         nwords = len(words)
         ids = torch.IntTensor(nwords + 1 if append_eos else nwords)
 
+        mask_prefix_len = len(mask_prefix) if mask_prefix else 0
         for i, word in enumerate(words):
+            if mask_prefix and word.startswith(mask_prefix):
+                mask = True
+                word = word[mask_prefix_len:]
+            else:
+                mask = False
             if add_if_not_exist:
                 idx = self.add_symbol(word)
             else:
                 idx = self.index(word)
             if consumer is not None:
                 consumer(word, idx)
-            ids[i] = idx
+            ids[i] = (-idx if mask else idx)
         if append_eos:
             ids[nwords] = self.eos_index
         return ids
