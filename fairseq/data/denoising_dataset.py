@@ -178,10 +178,10 @@ class DenoisingDataset(FairseqDataset):
             tokens = self.dataset[index]
             assert tokens[-1] == self.eos
             # for source, mask tokens which has negative idx value and merge continuous mask tokens 
-            source = np.where(tokens < 0, self.mask_idx, tokens)
-            source = source[[t != self.mask_idx or source[_ - 1] != self.mask_idx for _, t in enumerate(source)]]
+            source = torch.where(tokens < 0, self.mask_idx, tokens)
+            source = source[[t != self.mask_idx or source[_ - 1].item() != self.mask_idx for _, t in enumerate(source.tolist())]]
             # for target, remove negated mask tokens and convert all the negative token idxs back to positive ones
-            target = np.absolute(tokens[tokens != -self.mask_idx])
+            target = torch.absolute(tokens[tokens != -self.mask_idx])
 
             if self.permute_sentence_ratio > 0.0:
                 source = self.permute_sentences(source, self.permute_sentence_ratio)
@@ -204,7 +204,7 @@ class DenoisingDataset(FairseqDataset):
         assert (source >= 0).all()
         assert (source[1:-1] >= 1).all()
         assert (source <= len(self.vocab)).all()
-        assert source[0] == self.vocab.bos()
+        assert source[0] == self.vocab.bos(), str(tokens) + "\n" + str(source) + "\n" + str(target)
         assert source[-1] == self.eos
         return {
             'id': index,
